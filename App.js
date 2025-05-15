@@ -7,6 +7,8 @@ import HomeScreen from "./src/HomeScreen";
 import CuisineDetailScreen from "./src/CuisineDetailScreen";
 import { CartProvider } from "./src/context/CartContext";
 import Toast from "react-native-toast-message";
+import CartScreen from "./src/CartScreen";
+import PaymentCompleteScreen from "./src/PaymentCompleteScreen";
 
 const Stack = createStackNavigator();
 
@@ -19,6 +21,11 @@ const App = () => {
           <Stack.Screen name="SignUp" component={SignUpScreen} />
           <Stack.Screen name="Home" component={HomeScreen} />
           <Stack.Screen name="CuisineDetail" component={CuisineDetailScreen} />
+          <Stack.Screen name="Cart" component={CartScreen} />
+          <Stack.Screen
+            name="PaymentComplete"
+            component={PaymentCompleteScreen}
+          />
         </Stack.Navigator>
       </NavigationContainer>
       <Toast />

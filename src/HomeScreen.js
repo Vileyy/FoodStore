@@ -50,7 +50,10 @@ const HomeScreen = ({ navigation }) => {
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Restaurant App</Text>
         <View style={styles.headerIcons}>
-          <TouchableOpacity style={styles.cartIconWrap}>
+          <TouchableOpacity
+            style={styles.cartIconWrap}
+            onPress={() => navigation.navigate("Cart")}
+          >
             <MaterialCommunityIcons
               name="cart-outline"
               size={28}
