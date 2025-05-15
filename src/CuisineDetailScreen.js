@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -6,25 +6,96 @@ import {
   Image,
   ScrollView,
   TouchableOpacity,
+  ActivityIndicator,
+  FlatList,
 } from "react-native";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 import { useCart } from "./context/CartContext";
 import Toast from "react-native-toast-message";
+import { database } from "./firebase/config";
+import { ref, onValue, query, orderByChild, equalTo } from "firebase/database";
 
 const CuisineDetailScreen = ({ route, navigation }) => {
   const { cuisine } = route.params;
   const { addToCart } = useCart();
+  const [foods, setFoods] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const handleAddToCart = () => {
-    addToCart(cuisine);
+  useEffect(() => {
+    const fetchFoods = async () => {
+      try {
+        const foodsRef = ref(database, "foods");
+
+        // If we want to filter by category name (case-insensitive)
+        const categoryName = cuisine.name.toLowerCase();
+
+        // Use onValue to listen for changes
+        onValue(
+          foodsRef,
+          (snapshot) => {
+            const data = snapshot.val();
+            if (data) {
+              // Convert Firebase object to array and filter by category
+              const foodsArray = Object.entries(data)
+                .map(([id, food]) => ({
+                  id,
+                  ...food,
+                }))
+                .filter(
+                  (food) =>
+                    food.category &&
+                    food.category.toLowerCase() === categoryName
+                );
+
+              setFoods(foodsArray);
+            }
+            setLoading(false);
+          },
+          (error) => {
+            console.error("Error fetching foods:", error);
+            setLoading(false);
+          }
+        );
+      } catch (error) {
+        console.error("Error setting up listener:", error);
+        setLoading(false);
+      }
+    };
+
+    fetchFoods();
+  }, [cuisine]);
+
+  const handleAddToCart = (item) => {
+    addToCart(item);
     Toast.show({
       type: "success",
       text1: "Thêm vào giỏ hàng thành công",
-      text2: `${cuisine.name} đã được thêm vào giỏ hàng`,
+      text2: `${item.name} đã được thêm vào giỏ hàng`,
       position: "bottom",
       visibilityTime: 2000,
     });
   };
+
+  const FoodItem = ({ item }) => (
+    <View style={styles.foodItem}>
+      <Image source={{ uri: item.image }} style={styles.foodImage} />
+      <View style={styles.foodInfo}>
+        <Text style={styles.foodName}>{item.name}</Text>
+        <Text style={styles.foodDescription} numberOfLines={2}>
+          {item.description}
+        </Text>
+        <View style={styles.foodPriceRow}>
+          <Text style={styles.foodPrice}>${item.price}</Text>
+          <TouchableOpacity
+            style={styles.addButton}
+            onPress={() => handleAddToCart(item)}
+          >
+            <MaterialCommunityIcons name="plus" size={20} color="#fff" />
+          </TouchableOpacity>
+        </View>
+      </View>
+    </View>
+  );
 
   return (
     <View style={styles.container}>
@@ -40,9 +111,9 @@ const CuisineDetailScreen = ({ route, navigation }) => {
       <ScrollView>
         <View style={styles.imageContainer}>
           <Image
-            source={cuisine.image}
+            source={{ uri: cuisine.image }}
             style={styles.image}
-            resizeMode="contain"
+            resizeMode="cover"
           />
         </View>
 
@@ -55,17 +126,22 @@ const CuisineDetailScreen = ({ route, navigation }) => {
           </Text>
 
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Popular Dishes</Text>
-            {/* Add your dish items here */}
-          </View>
+            <Text style={styles.sectionTitle}>Menu Items</Text>
 
-          <TouchableOpacity
-            style={styles.addToCartButton}
-            onPress={handleAddToCart}
-          >
-            <MaterialCommunityIcons name="cart-plus" size={24} color="#fff" />
-            <Text style={styles.addToCartText}>Add to Cart</Text>
-          </TouchableOpacity>
+            {loading ? (
+              <ActivityIndicator
+                size="large"
+                color="#B22222"
+                style={{ marginTop: 20 }}
+              />
+            ) : foods.length > 0 ? (
+              foods.map((item) => <FoodItem key={item.id} item={item} />)
+            ) : (
+              <Text style={styles.noItems}>
+                No items available for this category
+              </Text>
+            )}
+          </View>
         </View>
       </ScrollView>
     </View>
@@ -101,7 +177,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   image: {
-    width: 200,
+    width: "100%",
     height: 200,
   },
   content: {
@@ -142,6 +218,63 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "bold",
     marginLeft: 10,
+  },
+  foodItem: {
+    flexDirection: "row",
+    backgroundColor: "#fff",
+    borderRadius: 10,
+    marginBottom: 15,
+    elevation: 1,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    padding: 10,
+  },
+  foodImage: {
+    width: 100,
+    height: 100,
+    borderRadius: 10,
+  },
+  foodInfo: {
+    flex: 1,
+    marginLeft: 15,
+    justifyContent: "space-between",
+  },
+  foodName: {
+    fontSize: 16,
+    fontWeight: "bold",
+    color: "#333",
+  },
+  foodDescription: {
+    fontSize: 14,
+    color: "#666",
+    marginTop: 4,
+  },
+  foodPriceRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginTop: 8,
+  },
+  foodPrice: {
+    fontSize: 16,
+    fontWeight: "bold",
+    color: "#B22222",
+  },
+  addButton: {
+    backgroundColor: "#B22222",
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  noItems: {
+    textAlign: "center",
+    fontSize: 16,
+    color: "#888",
+    marginTop: 20,
   },
 });
 

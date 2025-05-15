@@ -8,7 +8,7 @@ const PaymentCompleteScreen = ({ route, navigation }) => {
   const { setCartItems } = useCart();
 
   const handleBackHome = () => {
-    setCartItems([]); // Xóa giỏ hàng
+    setCartItems([]); // Clear cart
     navigation.navigate("Home");
   };
 
@@ -24,7 +24,7 @@ const PaymentCompleteScreen = ({ route, navigation }) => {
           style={{ marginVertical: 18 }}
         />
         <Text style={styles.successText}>Your payment has been approved!</Text>
-        <Text style={styles.amount}>₹ {totalPay?.toFixed(2) || "0.00"}</Text>
+        <Text style={styles.amount}>${totalPay?.toFixed(2) || "0.00"}</Text>
       </View>
       <TouchableOpacity style={styles.backBtn} onPress={handleBackHome}>
         <Text style={styles.backBtnText}>Back to Home</Text>

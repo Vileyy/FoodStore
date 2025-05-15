@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -6,40 +6,45 @@ import {
   Image,
   TouchableOpacity,
   ScrollView,
+  ActivityIndicator,
 } from "react-native";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 import { useCart } from "./context/CartContext";
-
-const cuisines = [
-  {
-    name: "Chinese",
-    image: require("../assets/images/chinese.png"),
-  },
-  {
-    name: "South Indian",
-    image: require("../assets/images/south-indian.png"),
-  },
-  {
-    name: "Beverages",
-    image: require("../assets/images/beverages.png"),
-  },
-  {
-    name: "North India",
-    image: require("../assets/images/north-indian.png"),
-  },
-  {
-    name: "Pizza",
-    image: require("../assets/images/pizza.png"),
-  },
-  {
-    name: "Biryani",
-    image: require("../assets/images/biryani.png"),
-  },
-];
+import { database } from "./firebase/config";
+import { ref, onValue } from "firebase/database";
 
 const HomeScreen = ({ navigation }) => {
   const { getCartCount } = useCart();
   const cartCount = getCartCount();
+  const [categories, setCategories] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const categoriesRef = ref(database, "categories");
+
+    const unsubscribe = onValue(
+      categoriesRef,
+      (snapshot) => {
+        const data = snapshot.val();
+        if (data) {
+          const categoriesArray = Object.entries(data).map(
+            ([id, category]) => ({
+              id,
+              ...category,
+            })
+          );
+          setCategories(categoriesArray);
+        }
+        setLoading(false);
+      },
+      (error) => {
+        console.error("Error fetching categories:", error);
+        setLoading(false);
+      }
+    );
+
+    return () => unsubscribe();
+  }, []);
 
   return (
     <View style={{ flex: 1, backgroundColor: "#fff" }}>
@@ -77,24 +82,33 @@ const HomeScreen = ({ navigation }) => {
       </View>
       <ScrollView contentContainerStyle={{ paddingBottom: 30 }}>
         <Text style={styles.cuisineTitle}>Cuisine</Text>
-        <View style={styles.grid}>
-          {cuisines.map((item, idx) => (
-            <TouchableOpacity
-              style={styles.card}
-              key={idx}
-              onPress={() =>
-                navigation.navigate("CuisineDetail", { cuisine: item })
-              }
-            >
-              <Image
-                source={item.image}
-                style={styles.cardImg}
-                resizeMode="contain"
-              />
-              <Text style={styles.cardText}>{item.name}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
+
+        {loading ? (
+          <ActivityIndicator
+            size="large"
+            color="#B22222"
+            style={styles.loader}
+          />
+        ) : (
+          <View style={styles.grid}>
+            {categories.map((item) => (
+              <TouchableOpacity
+                style={styles.card}
+                key={item.id}
+                onPress={() =>
+                  navigation.navigate("CuisineDetail", { cuisine: item })
+                }
+              >
+                <Image
+                  source={{ uri: item.image }}
+                  style={styles.cardImg}
+                  resizeMode="cover"
+                />
+                <Text style={styles.cardText}>{item.name}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
       </ScrollView>
     </View>
   );
@@ -174,11 +188,15 @@ const styles = StyleSheet.create({
     width: 70,
     height: 70,
     marginBottom: 10,
+    borderRadius: 35,
   },
   cardText: {
     color: "#B22222",
     fontWeight: "bold",
     fontSize: 16,
+  },
+  loader: {
+    marginTop: 50,
   },
 });
 
